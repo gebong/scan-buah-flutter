@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import '../components/nav_bar.dart';
+import 'package:http/http.dart' as http;
 
 class FruitPrice extends StatelessWidget {
   const FruitPrice({super.key});
@@ -26,6 +28,22 @@ class FruitPrice extends StatelessWidget {
   }
 }
 
+class Item {
+  final int id;
+  final String nama;
+  final double harga;
+
+  Item({required this.id, required this.nama, required this.harga});
+
+  factory Item.fromJson(Map<String, dynamic> json) {
+    return Item(
+      id: json['id'],
+      nama: json['nama'],
+      harga: json['harga'].toDouble(),
+    );
+  }
+}
+
 class FruitPricePage extends StatefulWidget {
   const FruitPricePage({super.key, required this.title});
 
@@ -36,20 +54,121 @@ class FruitPricePage extends StatefulWidget {
 }
 
 class _FruitPriceState extends State<FruitPricePage> {
+  // Initial Selected Value
+  Item? dropdownvalue;
+  int? id;
+  double price = 0;
+  String fruit = '';
+  List<Item> fruitList = [];
+  bool isFunctionTriggered = false;
+
+  String _errorTitle = '';
+  String _errorMessage = '';
+
+  final TextEditingController priceController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
+
+    if (isFunctionTriggered == true) {
+      loadData();
+      setState(() {
+        isFunctionTriggered == false;
+      });
+      // print(isFunctionTriggered);
+      // print('its triggered');
+    }
+    loadData();
   }
 
-  // Initial Selected Value
-  String dropdownvalue = 'Pisang';
-
   // List of items in our dropdown menu
-  var items = [
-    'Pisang',
-    'Apel',
-    'Jeruk',
-  ];
+
+  Future<List<Item>> showAllData() async {
+    String dbServerURL = "http://127.0.0.1:3000/";
+
+    final dbResponse = await http.get(
+      Uri.parse(dbServerURL),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+    );
+
+    if (dbResponse.statusCode == 200) {
+      final dbJSONdata = json.decode(dbResponse.body);
+      List<dynamic> itemsData = dbJSONdata;
+      return itemsData.map((item) => Item.fromJson(item)).toList();
+    } else {
+      setState(() => {
+            _errorTitle = 'API Error!',
+            _errorMessage = 'Failed to fetch data from API'
+          });
+      if (context.mounted) {
+        showAlertDialog(context);
+      }
+      throw "Failed to fetch data from API";
+    }
+  }
+
+  void loadData() async {
+    try {
+      List<Item> data = await showAllData();
+      setState(() {
+        fruitList = data;
+      });
+    } catch (e) {
+      // print('Error fetching data: $e');
+    }
+  }
+
+  Future<void> setPricing(int? i) async {
+    String dbServerURL = "http://127.0.0.1:3000/$i";
+
+    try {
+      int updatedPrice = int.parse(priceController.text);
+      var dbResponse = await http.put(
+        Uri.parse(dbServerURL),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'harga': updatedPrice,
+        }),
+      );
+
+      if (dbResponse.statusCode == 201) {
+        // List<Item> data = await showAllData();
+        // fruitList.clear();
+        setState(() => {
+              _errorTitle = 'Update Harga Berhasil',
+              _errorMessage = 'Berhasil merubah harga buah',
+              isFunctionTriggered = true,
+              // fruitList = data
+            });
+        // print(isFunctionTriggered);
+        // await showAllData();
+        if (context.mounted) {
+          showAlertDialog(context);
+        }
+      } else {
+        var dbJSONdata = json.decode(dbResponse.body);
+
+        setState(() => {
+              _errorTitle = 'DB Server Error!',
+              _errorMessage = dbJSONdata['msg']
+            });
+        if (context.mounted) {
+          showAlertDialog(context);
+        }
+
+        // showAlertDialog();
+      }
+    } catch (e) {
+      setState(
+          () => {_errorTitle = 'App Error!', _errorMessage = e.toString()});
+      showAlertDialog(context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,35 +189,34 @@ class _FruitPriceState extends State<FruitPricePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            DropdownButton(
-
-                // Initial Value
+            DropdownButton<Item>(
                 value: dropdownvalue,
-
-                // Down Arrow Icon
+                hint: const Text("Pilih buah"),
                 icon: const Icon(Icons.keyboard_arrow_down),
-
-                // Array list of items
-                items: items.map((String items) {
+                items: fruitList.map((Item items) {
                   return DropdownMenuItem(
                     value: items,
-                    child: Text(items),
+                    child: Text(items.nama),
                   );
                 }).toList(),
-                // After selecting the desired option,it will
-                // change button value to selected value
-                onChanged: (String? newValue) {
+                onChanged: (Item? newValue) {
                   setState(() {
-                    dropdownvalue = newValue!;
+                    dropdownvalue = newValue;
+                    id = dropdownvalue!.id;
+                    priceController.text =
+                        dropdownvalue!.harga.toStringAsFixed(0);
+                    fruit = dropdownvalue!.nama;
                   });
                 }),
             const SizedBox(height: 20),
-            const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+            Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
                 child: SizedBox(
                   width: 200,
                   child: TextField(
-                    decoration: InputDecoration(
+                    controller: priceController,
+                    decoration: const InputDecoration(
                       border: OutlineInputBorder(),
                       hintText: 'Input harga buah',
                     ),
@@ -106,13 +224,77 @@ class _FruitPriceState extends State<FruitPricePage> {
                 )),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => '',
+              onPressed: () => showConfirmationDialog(context),
               child: const Text('Ubah Harga'),
             ),
             const SizedBox(height: 10),
           ],
         ),
       ),
+    );
+  }
+
+  showAlertDialog(BuildContext context) {
+    // set up the button
+    Widget okButton = TextButton(
+      child: const Text("OK"),
+      onPressed: () {
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop('dialog');
+          setState(() {
+            _errorTitle = '';
+            _errorMessage = '';
+          });
+        }
+      },
+    );
+    // set up the AlertDialog
+    AlertDialog alert = AlertDialog(
+      title: Text(_errorTitle),
+      content: Text(_errorMessage),
+      actions: [
+        okButton,
+      ],
+    );
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
+  }
+
+  showConfirmationDialog(BuildContext context) {
+    // set up the buttons
+    Widget cancelButton = TextButton(
+      child: const Text("Tidak"),
+      onPressed: () {
+        Navigator.of(context, rootNavigator: true).pop('dialog');
+      },
+    );
+    Widget continueButton = TextButton(
+      child: const Text("Iya"),
+      onPressed: () {
+        setPricing(id);
+        Navigator.of(context, rootNavigator: true).pop('dialog');
+      },
+    );
+    // set up the AlertDialog
+    AlertDialog alert = AlertDialog(
+      title: const Text("Konfirmasi"),
+      content: const Text("Apakah anda yakin mengubah harga buah ini?"),
+      actions: [
+        cancelButton,
+        continueButton,
+      ],
+    );
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
     );
   }
 }

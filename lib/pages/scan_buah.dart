@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/cupertino.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,15 +9,6 @@ import '../components/nav_bar.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
 
   final String title;
 
@@ -24,26 +18,169 @@ class HomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<HomePage> {
   File? _image; // Initialize with a default value of an empty file path
-  final double _freshness = 0;
-  final String _fruitClass = '';
+  File? _image2; // Initialize with a default value of an empty file path
+  double _freshness = 0;
+  String _fruitClass = '';
+  double _price = 0;
+  String _errorTitle = '';
+  String _errorMessage = '';
 
   @override
   void initState() {
     super.initState();
   }
 
-  Future pickImageFromGallery() async {
+  Future<void> pickImageFromGallery(void Function(File?) setImage) async {
     final image = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (image == null) return;
     final imageTemp = File(image.path);
-    setState(() => _image = imageTemp);
+    setState(() => setImage(imageTemp));
   }
 
-  Future pickImageFromCamera() async {
-    final image = await ImagePicker().pickImage(source: ImageSource.camera);
-    if (image == null) return;
-    final imageTemp = File(image.path);
-    setState(() => _image = imageTemp);
+  Future<void> pickImageFromCamera(void Function(File?) setImage) async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      final image = await ImagePicker().pickImage(source: ImageSource.camera);
+      if (image == null) return;
+      final imageTemp = File(image.path);
+      setState(() => setImage(imageTemp));
+    } else {
+      setState(() => {
+            _errorTitle = 'Pengambilan Kamera Tidak Didukung',
+            _errorMessage =
+                'Mohon maaf, pengambilan melalaui kamera hanya didukung untuk platform Android dan iOS'
+          });
+      if (context.mounted) {
+        showAlertDialog(context);
+      }
+    }
+  }
+
+  Future<void> sendImage() async {
+    String mlServerURL = "http://127.0.0.1:5000/predict";
+    String dbServerURL = "http://127.0.0.1:3000/price";
+
+    try {
+      Future<http.Response> mlRequestFunction(File? image) async {
+        var mlRequest = http.MultipartRequest(
+          'POST',
+          Uri.parse(mlServerURL),
+        );
+        Map<String, String> headers = {"Content-type": "multipart/form-data"};
+        mlRequest.files
+            .add(await http.MultipartFile.fromPath('image', image!.path));
+        mlRequest.headers.addAll(headers);
+        var res = await mlRequest.send();
+        http.Response mlResponse = await http.Response.fromStream(res);
+
+        return mlResponse;
+      }
+
+      if (_image == null && _image2 == null) {
+        setState(() => {
+              _errorTitle = 'Tidak ada gambar!',
+              _errorMessage =
+                  'Mohon ambil gambar buah untuk kedua sisi terlebih dahulu'
+            });
+        if (context.mounted) {
+          showAlertDialog(context);
+        }
+      } else if (_image2 == null) {
+        setState(() => {
+              _errorTitle = 'Tidak ada gambar buah sisi belakang!',
+              _errorMessage =
+                  'Mohon ambil gambar buah sisi belakang terlebih dahulu'
+            });
+        if (context.mounted) {
+          showAlertDialog(context);
+        }
+      } else if (_image == null) {
+        setState(() => {
+              _errorTitle = 'Tidak ada gambar buah sisi depan!',
+              _errorMessage =
+                  'Mohon ambil gambar buah sisi depan terlebih dahulu'
+            });
+        if (context.mounted) {
+          showAlertDialog(context);
+        }
+      } else {
+        http.Response ml1 = await mlRequestFunction(_image);
+        http.Response ml2 = await mlRequestFunction(_image2);
+
+        if (ml1.statusCode == 200 && ml2.statusCode == 200) {
+          var jsondata1 = json.decode(ml1.body); //decode json dat
+          var jsondata2 = json.decode(ml2.body); //decode json dat
+
+          var fruitName1 = jsondata1['fruitname'];
+          var fruitName2 = jsondata2['fruitname'];
+          if (fruitName1 == fruitName2) {
+            var fruitQuality1 =
+                double.parse(jsondata1['freshness_percentage'].toString());
+            var fruitQuality2 =
+                double.parse(jsondata2['freshness_percentage'].toString());
+
+            var overralFruitQuality = (fruitQuality1 + fruitQuality2) / 2;
+
+            // print(fruitQuality1);
+            // print(fruitQuality2);
+            // print(OverlayPortalController);
+            var dbResponse = await http.post(
+              Uri.parse(dbServerURL),
+              headers: <String, String>{
+                'Content-Type': 'application/json; charset=UTF-8',
+              },
+              body: jsonEncode(<String, String>{
+                'nama_buah': jsondata1['fruit_name'].toString(),
+                'kualitas': overralFruitQuality.toString(),
+              }),
+            );
+
+            if (dbResponse.statusCode == 200) {
+              var dbJSONdata = json.decode(dbResponse.body);
+
+              setState(() => {
+                    _fruitClass = jsondata1['fruit_name'],
+                    _freshness = overralFruitQuality,
+                    _price = double.parse(dbJSONdata['harga_buah'].toString())
+                  });
+            } else {
+              var dbJSONdata = json.decode(dbResponse.body);
+              setState(() => {
+                    _errorTitle = 'DB Server Error!',
+                    _errorMessage = dbJSONdata['msg']
+                  });
+              if (context.mounted) {
+                showAlertDialog(context);
+              }
+            }
+          } else {
+            setState(() => {
+                  _errorTitle = 'Buah Tidak Sama!',
+                  _errorMessage =
+                      'Buah yang anda berikan berbeda tiap sisi, pastikan buah kedua sisinya sama jenisnya'
+                });
+            if (context.mounted) {
+              showAlertDialog(context);
+            }
+          }
+        } else {
+          var jsondata = json.decode(ml1.body);
+          setState(() => {
+                _errorTitle = 'ML Server Error!',
+                _errorMessage = jsondata['msg']
+              });
+          if (context.mounted) {
+            showAlertDialog(context);
+          }
+        }
+      }
+    } catch (e) {
+      // print(e);
+      setState(() =>
+          {_errorTitle = 'Application Error!', _errorMessage = e.toString()});
+      if (context.mounted) {
+        showAlertDialog(context);
+      }
+    }
   }
 
   @override
@@ -71,30 +208,137 @@ class _MyHomePageState extends State<HomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            _image != null ? Image.file(_image!) : Container(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _image != null
+                    ? Padding(
+                        padding: const EdgeInsets.only(left: 10, right: 10),
+                        child: SizedBox(
+                          width: 200,
+                          height: 200,
+                          child: Image.file(
+                            _image!,
+                            fit: BoxFit.cover,
+                          ),
+                        ))
+                    : const SizedBox(width: 200, height: 200),
+                _image2 != null
+                    ? Padding(
+                        padding: const EdgeInsets.only(left: 10, right: 10),
+                        child: SizedBox(
+                          width: 200,
+                          height: 200,
+                          child: Image.file(
+                            _image2!,
+                            fit: BoxFit.cover,
+                          ),
+                        ))
+                    : const SizedBox(width: 200, height: 200),
+              ],
+            ),
             const SizedBox(height: 20),
             Text('Fruit Name: $_fruitClass'),
             Text('Freshness: $_freshness'),
+            Text('Price: $_price'),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => '',
+              onPressed: () => sendImage(),
               child: const Text('Cek Kesegaran'),
             ),
             const SizedBox(height: 10),
             ElevatedButton(
-              onPressed: () => pickImageFromGallery(),
-              child: const Text('Ambil Gambar dari Gallery'),
+              onPressed: () =>
+                  showPickImagePopup((image) => _image = image, "Depan"),
+              child: const Text('Ambil Gambar Sisi Depan'),
             ),
             const SizedBox(height: 10),
             ElevatedButton(
-              onPressed: () => pickImageFromCamera(),
-              child: const Text('Ambil Gambar dari Kamera'),
+              onPressed: () =>
+                  showPickImagePopup((image) => _image2 = image, "Belakang"),
+              child: const Text('Ambil Gambar Sisi Belakang'),
             ),
           ],
         ),
       ),
-
       // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+
+  void showPickImagePopup(Function(dynamic) setImage, String nama) {
+    showCupertinoModalPopup(
+        context: context,
+        builder: (BuildContext builder) {
+          return CupertinoPopupSurface(
+              isSurfacePainted: true,
+              child: Container(
+                  padding: const EdgeInsetsDirectional.all(16),
+                  color: CupertinoColors.white,
+                  alignment: Alignment.center,
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).copyWith().size.height * 0.25,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Material(
+                          child: Text(
+                        "Pilih Sumber Gambar untuk $nama",
+                        style: const TextStyle(
+                          color: CupertinoColors.black,
+                          fontSize: 20,
+                        ),
+                      )),
+                      const SizedBox(height: 20),
+                      Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton(
+                              onPressed: () => {
+                                pickImageFromGallery(setImage),
+                                Navigator.of(context).pop()
+                              },
+                              child: const Text('Ambil Gambar dari Gallery'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => {
+                                pickImageFromCamera(setImage),
+                                Navigator.of(context).pop()
+                              },
+                              child: const Text('Ambil Gambar dari Kamera'),
+                            ),
+                          ])
+                    ],
+                  )));
+        });
+  }
+
+  showAlertDialog(BuildContext context) {
+    // set up the button
+    Widget okButton = TextButton(
+      child: const Text("OK"),
+      onPressed: () {
+        Navigator.of(context).pop();
+        setState(() {
+          _errorTitle = '';
+          _errorMessage = '';
+        });
+      },
+    );
+    // set up the AlertDialog
+    AlertDialog alert = AlertDialog(
+      title: Text(_errorTitle),
+      content: Text(_errorMessage),
+      actions: [
+        okButton,
+      ],
+    );
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
     );
   }
 }
