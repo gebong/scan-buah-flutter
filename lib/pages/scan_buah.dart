@@ -22,6 +22,7 @@ class _MyHomePageState extends State<HomePage> {
   double _freshness = 0;
   String _fruitClass = '';
   double _price = 0;
+  String _kualitas = '';
   String _errorTitle = '';
   String _errorMessage = '';
 
@@ -56,7 +57,7 @@ class _MyHomePageState extends State<HomePage> {
   }
 
   Future<void> sendImage() async {
-    String mlServerURL = "http://127.0.0.1:5000/predict";
+    String mlServerURL = "http://127.0.0.1:8000/predict";
     String dbServerURL = "http://127.0.0.1:3000/price";
 
     try {
@@ -110,15 +111,18 @@ class _MyHomePageState extends State<HomePage> {
           var jsondata1 = json.decode(ml1.body); //decode json dat
           var jsondata2 = json.decode(ml2.body); //decode json dat
 
-          var fruitName1 = jsondata1['fruitname'];
-          var fruitName2 = jsondata2['fruitname'];
+          var fruitName1 = jsondata1['fruit_name'];
+          var fruitName2 = jsondata2['fruit_name'];
+
+          // print("$jsondata1 and $jsondata2");
+
           if (fruitName1 == fruitName2) {
             var fruitQuality1 =
                 double.parse(jsondata1['freshness_percentage'].toString());
             var fruitQuality2 =
                 double.parse(jsondata2['freshness_percentage'].toString());
 
-            var overralFruitQuality = (fruitQuality1 + fruitQuality2) / 2;
+            var overralFruitQuality = ((fruitQuality1 + fruitQuality2) / 2);
 
             // print(fruitQuality1);
             // print(fruitQuality2);
@@ -139,8 +143,10 @@ class _MyHomePageState extends State<HomePage> {
 
               setState(() => {
                     _fruitClass = jsondata1['fruit_name'],
-                    _freshness = overralFruitQuality,
-                    _price = double.parse(dbJSONdata['harga_buah'].toString())
+                    _freshness =
+                        double.parse(overralFruitQuality.toStringAsFixed(2)),
+                    _price = double.parse(dbJSONdata['harga_buah'].toString()),
+                    _kualitas = dbJSONdata['kualitas']
                   });
             } else {
               var dbJSONdata = json.decode(dbResponse.body);
@@ -215,32 +221,33 @@ class _MyHomePageState extends State<HomePage> {
                     ? Padding(
                         padding: const EdgeInsets.only(left: 10, right: 10),
                         child: SizedBox(
-                          width: 200,
-                          height: 200,
+                          width: 150,
+                          height: 150,
                           child: Image.file(
                             _image!,
                             fit: BoxFit.cover,
                           ),
                         ))
-                    : const SizedBox(width: 200, height: 200),
+                    : const SizedBox(width: 150, height: 150),
                 _image2 != null
                     ? Padding(
                         padding: const EdgeInsets.only(left: 10, right: 10),
                         child: SizedBox(
-                          width: 200,
-                          height: 200,
+                          width: 150,
+                          height: 150,
                           child: Image.file(
                             _image2!,
                             fit: BoxFit.cover,
                           ),
                         ))
-                    : const SizedBox(width: 200, height: 200),
+                    : const SizedBox(width: 150, height: 150),
               ],
             ),
             const SizedBox(height: 20),
-            Text('Fruit Name: $_fruitClass'),
-            Text('Freshness: $_freshness'),
-            Text('Price: $_price'),
+            Text('Nama Buah: $_fruitClass'),
+            Text('Persentase Kesegaran: $_freshness %'),
+            Text('Harga: Rp. $_price'),
+            Text('Kualitas: $_kualitas'),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () => sendImage(),

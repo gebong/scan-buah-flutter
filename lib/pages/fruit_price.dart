@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../components/nav_bar.dart';
 import 'package:http/http.dart' as http;
+import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 
 class FruitPrice extends StatelessWidget {
   const FruitPrice({super.key});
@@ -137,18 +139,22 @@ class _FruitPriceState extends State<FruitPricePage> {
       );
 
       if (dbResponse.statusCode == 201) {
-        // List<Item> data = await showAllData();
-        // fruitList.clear();
+        List<Item> data = await showAllData();
+
         setState(() => {
               _errorTitle = 'Update Harga Berhasil',
               _errorMessage = 'Berhasil merubah harga buah',
               isFunctionTriggered = true,
-              // fruitList = data
+              dropdownvalue = null,
+              priceController.text = '',
+              fruitList = data
             });
+
         // print(isFunctionTriggered);
         // await showAllData();
         if (context.mounted) {
           showAlertDialog(context);
+          context.go('/fruit_price');
         }
       } else {
         var dbJSONdata = json.decode(dbResponse.body);
@@ -194,7 +200,7 @@ class _FruitPriceState extends State<FruitPricePage> {
                 hint: const Text("Pilih buah"),
                 icon: const Icon(Icons.keyboard_arrow_down),
                 items: fruitList.map((Item items) {
-                  return DropdownMenuItem(
+                  return DropdownMenuItem<Item>(
                     value: items,
                     child: Text(items.nama),
                   );
@@ -215,6 +221,9 @@ class _FruitPriceState extends State<FruitPricePage> {
                 child: SizedBox(
                   width: 200,
                   child: TextField(
+                    enabled: (dropdownvalue != null ? true : false),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     controller: priceController,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
@@ -224,7 +233,18 @@ class _FruitPriceState extends State<FruitPricePage> {
                 )),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => showConfirmationDialog(context),
+              onPressed: () => {
+                if (id == null)
+                  {
+                    setState(() => {
+                          _errorTitle = 'Tidak ada buah yang dipilih!',
+                          _errorMessage = 'Mohon pilih buah terlebih dahulu!'
+                        }),
+                    showAlertDialog(context)
+                  }
+                else
+                  {showConfirmationDialog(context)}
+              },
               child: const Text('Ubah Harga'),
             ),
             const SizedBox(height: 10),
