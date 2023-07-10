@@ -4,6 +4,7 @@ import '../components/nav_bar.dart';
 import 'package:http/http.dart' as http;
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
+import 'server_address.dart';
 
 class FruitPrice extends StatelessWidget {
   const FruitPrice({super.key});
@@ -87,7 +88,8 @@ class _FruitPriceState extends State<FruitPricePage> {
   // List of items in our dropdown menu
 
   Future<List<Item>> showAllData() async {
-    String dbServerURL = "http://127.0.0.1:3000/";
+    String dbServerURL =
+        "${ServerAddressSettings.serverAddress}:${ServerAddressSettings.dbPort}";
 
     final dbResponse = await http.get(
       Uri.parse(dbServerURL),
@@ -101,6 +103,7 @@ class _FruitPriceState extends State<FruitPricePage> {
       List<dynamic> itemsData = dbJSONdata;
       return itemsData.map((item) => Item.fromJson(item)).toList();
     } else {
+      print(dbResponse.body);
       setState(() => {
             _errorTitle = 'API Error!',
             _errorMessage = 'Failed to fetch data from API'

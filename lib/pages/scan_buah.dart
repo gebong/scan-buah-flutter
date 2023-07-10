@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../components/nav_bar.dart';
+import 'server_address.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
@@ -57,8 +58,11 @@ class _MyHomePageState extends State<HomePage> {
   }
 
   Future<void> sendImage() async {
-    String mlServerURL = "http://127.0.0.1:8000/predict";
-    String dbServerURL = "http://127.0.0.1:3000/price";
+    // String mlServerURL = "http://127.0.0.1:8000/predict";
+    String mlServerURL =
+        '${ServerAddressSettings.serverAddress}:${ServerAddressSettings.mlPort}/predict';
+    String dbServerURL =
+        "${ServerAddressSettings.serverAddress}:${ServerAddressSettings.dbPort}/price";
 
     try {
       Future<http.Response> mlRequestFunction(File? image) async {
