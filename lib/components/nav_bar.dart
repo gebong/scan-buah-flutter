@@ -29,6 +29,10 @@ class NavBar extends StatelessWidget {
             title: const Text('Informasi'),
             onTap: () => context.go('/information'),
           ),
+          ListTile(
+            title: const Text('Konfigurasi Server'),
+            onTap: () => context.go('/server'),
+          ),
         ],
       ),
     );
