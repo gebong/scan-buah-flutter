@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../pages/scan_buah.dart';
 import '../pages/fruit_price.dart';
 import '../pages/informasi.dart';
+import '../pages/server_address.dart';
 
 final GoRouter router = GoRouter(
   routes: <GoRoute>[
@@ -24,6 +25,12 @@ final GoRouter router = GoRouter(
       path: '/information',
       builder: (BuildContext context, GoRouterState state) {
         return const Information();
+      },
+    ),
+    GoRoute(
+      path: '/server',
+      builder: (BuildContext context, GoRouterState state) {
+        return ServerSettingsPage();
       },
     ),
   ],
