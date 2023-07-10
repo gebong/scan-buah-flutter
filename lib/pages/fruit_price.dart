@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'server_address.dart';
+import 'dart:io';
 
 class FruitPrice extends StatelessWidget {
   const FruitPrice({super.key});
@@ -67,12 +68,17 @@ class _FruitPriceState extends State<FruitPricePage> {
 
   String _errorTitle = '';
   String _errorMessage = '';
+  String _status = '';
+
+  String url =
+      "http://${ServerAddressSettings.serverAddress}:${ServerAddressSettings.dbPort}";
 
   final TextEditingController priceController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    testConnection();
 
     if (isFunctionTriggered == true) {
       loadData();
@@ -87,9 +93,24 @@ class _FruitPriceState extends State<FruitPricePage> {
 
   // List of items in our dropdown menu
 
+  void testConnection() async {
+    Socket.connect(
+            ServerAddressSettings.serverAddress, ServerAddressSettings.dbPort,
+            timeout: const Duration(seconds: 5))
+        .then((socket) {
+      setState(() => _status = 'ONLINE!');
+      socket.destroy();
+    }).catchError((error) {
+      setState(() => _status = 'DB SERVER OFFLINE!');
+      if (context.mounted) {
+        connectionErrorDialog(context);
+      }
+    });
+  }
+
   Future<List<Item>> showAllData() async {
     String dbServerURL =
-        "${ServerAddressSettings.serverAddress}:${ServerAddressSettings.dbPort}";
+        "http://${ServerAddressSettings.serverAddress}:${ServerAddressSettings.dbPort}";
 
     final dbResponse = await http.get(
       Uri.parse(dbServerURL),
@@ -98,12 +119,14 @@ class _FruitPriceState extends State<FruitPricePage> {
       },
     );
 
+    print(dbResponse.statusCode);
+
     if (dbResponse.statusCode == 200) {
       final dbJSONdata = json.decode(dbResponse.body);
       List<dynamic> itemsData = dbJSONdata;
       return itemsData.map((item) => Item.fromJson(item)).toList();
     } else {
-      print(dbResponse.body);
+      // print(dbResponse.body);
       setState(() => {
             _errorTitle = 'API Error!',
             _errorMessage = 'Failed to fetch data from API'
@@ -127,7 +150,8 @@ class _FruitPriceState extends State<FruitPricePage> {
   }
 
   Future<void> setPricing(int? i) async {
-    String dbServerURL = "http://127.0.0.1:3000/$i";
+    String dbServerURL =
+        "http://${ServerAddressSettings.serverAddress}:${ServerAddressSettings.dbPort}/$i";
 
     try {
       int updatedPrice = int.parse(priceController.text);
@@ -250,7 +274,8 @@ class _FruitPriceState extends State<FruitPricePage> {
               },
               child: const Text('Ubah Harga'),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
+            Text('STATUS: $_status'),
           ],
         ),
       ),
@@ -310,6 +335,33 @@ class _FruitPriceState extends State<FruitPricePage> {
       actions: [
         cancelButton,
         continueButton,
+      ],
+    );
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
+  }
+
+  connectionErrorDialog(BuildContext context) {
+    // set up the button
+    Widget okButton = TextButton(
+      child: const Text("Atur Ulang Koneksi"),
+      onPressed: () {
+        context.go('/server');
+        Navigator.of(context).pop();
+      },
+    );
+    // set up the AlertDialog
+    AlertDialog alert = AlertDialog(
+      title: const Text('Connection Error'),
+      content:
+          const Text('Pastikan settingan server sudah diatur dengan benar'),
+      actions: [
+        okButton,
       ],
     );
     // show the dialog

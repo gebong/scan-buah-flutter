@@ -30,7 +30,7 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/server',
       builder: (BuildContext context, GoRouterState state) {
-        return ServerSettingsPage();
+        return const ServerSettingsPage();
       },
     ),
   ],

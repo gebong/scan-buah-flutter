@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
-
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import '../components/nav_bar.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'server_address.dart';
 
 class HomePage extends StatefulWidget {
@@ -26,10 +26,38 @@ class _MyHomePageState extends State<HomePage> {
   String _kualitas = '';
   String _errorTitle = '';
   String _errorMessage = '';
+  String _status = '';
 
   @override
   void initState() {
     super.initState();
+    testConnection();
+  }
+
+  void testConnection() async {
+    Socket.connect(
+            ServerAddressSettings.serverAddress, ServerAddressSettings.dbPort,
+            timeout: const Duration(seconds: 5))
+        .then((socket) {
+      Socket.connect(
+              ServerAddressSettings.serverAddress, ServerAddressSettings.mlPort,
+              timeout: const Duration(seconds: 5))
+          .then((socket) {
+        setState(() => _status = 'ONLINE!');
+        socket.destroy();
+      }).catchError((error) {
+        setState(() => _status = 'ML SERVER OFFLINE!');
+        if (context.mounted) {
+          connectionErrorDialog(context);
+        }
+      });
+      socket.destroy();
+    }).catchError((error) {
+      if (context.mounted) {
+        connectionErrorDialog(context);
+      }
+      setState(() => _status = 'DB SERVER OFFLINE!');
+    });
   }
 
   Future<void> pickImageFromGallery(void Function(File?) setImage) async {
@@ -60,9 +88,9 @@ class _MyHomePageState extends State<HomePage> {
   Future<void> sendImage() async {
     // String mlServerURL = "http://127.0.0.1:8000/predict";
     String mlServerURL =
-        '${ServerAddressSettings.serverAddress}:${ServerAddressSettings.mlPort}/predict';
+        'http://${ServerAddressSettings.serverAddress}:${ServerAddressSettings.mlPort}/predict';
     String dbServerURL =
-        "${ServerAddressSettings.serverAddress}:${ServerAddressSettings.dbPort}/price";
+        "http://${ServerAddressSettings.serverAddress}:${ServerAddressSettings.dbPort}/price";
 
     try {
       Future<http.Response> mlRequestFunction(File? image) async {
@@ -269,6 +297,8 @@ class _MyHomePageState extends State<HomePage> {
                   showPickImagePopup((image) => _image2 = image, "Belakang"),
               child: const Text('Ambil Gambar Sisi Belakang'),
             ),
+            const SizedBox(height: 20),
+            Text('STATUS: $_status'),
           ],
         ),
       ),
@@ -340,6 +370,33 @@ class _MyHomePageState extends State<HomePage> {
     AlertDialog alert = AlertDialog(
       title: Text(_errorTitle),
       content: Text(_errorMessage),
+      actions: [
+        okButton,
+      ],
+    );
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
+  }
+
+  connectionErrorDialog(BuildContext context) {
+    // set up the button
+    Widget okButton = TextButton(
+      child: const Text("Atur Ulang Koneksi"),
+      onPressed: () {
+        context.go('/server');
+        Navigator.of(context).pop();
+      },
+    );
+    // set up the AlertDialog
+    AlertDialog alert = AlertDialog(
+      title: const Text('Connection Error'),
+      content:
+          const Text('Pastikan settingan server sudah diatur dengan benar'),
       actions: [
         okButton,
       ],

@@ -1,9 +1,10 @@
-import 'package:http/http.dart' as http;
+// import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import '../components/nav_bar.dart';
+import 'dart:io';
 
 class ServerAddressSettings {
-  static String serverAddress = 'http://127.0.0.1';
+  static String serverAddress = '127.0.0.1';
   static int mlPort = 8000;
   static int dbPort = 3000;
 
@@ -14,11 +15,51 @@ class ServerAddressSettings {
   }
 }
 
-class ServerSettingsPage extends StatelessWidget {
-  ServerSettingsPage({super.key});
+class ServerSettingsPage extends StatefulWidget {
+  const ServerSettingsPage({super.key});
+
+  @override
+  State<ServerSettingsPage> createState() => _ServerSettingsState();
+}
+
+class _ServerSettingsState extends State<ServerSettingsPage> {
   final TextEditingController addressController = TextEditingController();
   final TextEditingController dbPortController = TextEditingController();
   final TextEditingController mlPortController = TextEditingController();
+
+  String _errorTitle = '';
+  String _errorMessage = '';
+  String _dbStatus = '';
+  String _mlStatus = '';
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  void testDBConnection() async {
+    Socket.connect(
+            ServerAddressSettings.serverAddress, ServerAddressSettings.dbPort,
+            timeout: const Duration(seconds: 5))
+        .then((socket) {
+      setState(() => _dbStatus = 'Connected!');
+      socket.destroy();
+    }).catchError((error) {
+      setState(() => _dbStatus = 'Connection refused!');
+    });
+  }
+
+  void testMLConnection() async {
+    Socket.connect(
+            ServerAddressSettings.serverAddress, ServerAddressSettings.mlPort,
+            timeout: const Duration(seconds: 5))
+        .then((socket) {
+      setState(() => _mlStatus = 'Connected!');
+      socket.destroy();
+    }).catchError((error) {
+      setState(() => _mlStatus = 'Connection refused!');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,17 +101,56 @@ class ServerSettingsPage extends StatelessWidget {
             const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () {
+                setState(() {
+                  _mlStatus = 'Loading..';
+                  _dbStatus = 'Loading..';
+                });
                 String address = addressController.text;
                 int mlPort = int.tryParse(mlPortController.text) ?? 0;
                 int dbPort = int.tryParse(dbPortController.text) ?? 0;
 
                 ServerAddressSettings.updateSettings(address, mlPort, dbPort);
+
+                testDBConnection();
+                testMLConnection();
               },
               child: const Text('Save'),
             ),
+            const SizedBox(height: 10),
+            Text('ML Server Status: $_mlStatus'),
+            Text('DB Server Status: $_dbStatus'),
           ],
         ),
       ),
+    );
+  }
+
+  showAlertDialog(BuildContext context) {
+    // set up the button
+    Widget okButton = TextButton(
+      child: const Text("OK"),
+      onPressed: () {
+        Navigator.of(context).pop();
+        setState(() {
+          _errorTitle = '';
+          _errorMessage = '';
+        });
+      },
+    );
+    // set up the AlertDialog
+    AlertDialog alert = AlertDialog(
+      title: Text(_errorTitle),
+      content: Text(_errorMessage),
+      actions: [
+        okButton,
+      ],
+    );
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
     );
   }
 }
