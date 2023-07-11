@@ -46,7 +46,8 @@ class _ServerSettingsState extends State<ServerSettingsPage> {
       socket.destroy();
     }).catchError((error) {
       setState(() => _dbStatus = error.toString());
-      print(error);
+      // setState(() => _dbStatus = 'Connection refused!');
+      // print(error);
     });
   }
 
@@ -59,6 +60,7 @@ class _ServerSettingsState extends State<ServerSettingsPage> {
       socket.destroy();
     }).catchError((error) {
       setState(() => _mlStatus = error.toString());
+      // setState(() => _mlStatus = 'Connection refused!');
     });
   }
 
