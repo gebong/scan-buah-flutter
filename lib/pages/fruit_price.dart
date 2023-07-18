@@ -119,7 +119,7 @@ class _FruitPriceState extends State<FruitPricePage> {
       },
     );
 
-    print(dbResponse.statusCode);
+    // print(dbResponse.statusCode);
 
     if (dbResponse.statusCode == 200) {
       final dbJSONdata = json.decode(dbResponse.body);
@@ -165,7 +165,9 @@ class _FruitPriceState extends State<FruitPricePage> {
         }),
       );
 
-      if (dbResponse.statusCode == 201) {
+      // print(dbResponse.statusCode);
+
+      if (dbResponse.statusCode == 200 || dbResponse.statusCode == 201) {
         List<Item> data = await showAllData();
 
         setState(() => {
@@ -200,6 +202,7 @@ class _FruitPriceState extends State<FruitPricePage> {
       setState(
           () => {_errorTitle = 'App Error!', _errorMessage = e.toString()});
       showAlertDialog(context);
+      // print(e);
     }
   }
 
