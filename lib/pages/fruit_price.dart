@@ -212,7 +212,7 @@ class _FruitPriceState extends State<FruitPricePage> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         title: const Text(
-          'Cek Harga Buah',
+          'Pengaturan Harga Buah',
           style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w200,

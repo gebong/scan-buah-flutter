@@ -233,7 +233,7 @@ class _MyHomePageState extends State<HomePage> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         title: const Text(
-          'Aplikasi Scan Kesegaran Buah',
+          'Aplikasi Pemindaian Kesegaran dan Kalkulasi Harga Buah',
           style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w200,

@@ -18,11 +18,11 @@ class NavBar extends StatelessWidget {
             child: Text('Main Menus'),
           ),
           ListTile(
-            title: const Text('Scan Kesegaran Buah'),
+            title: const Text('Pemindaian Kesegaran Buah'),
             onTap: () => context.go('/'),
           ),
           ListTile(
-            title: const Text('Harga Buah'),
+            title: const Text('Pengaturan Harga Buah'),
             onTap: () => context.go('/fruit_price'),
           ),
           ListTile(
