@@ -18,8 +18,10 @@ class HomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<HomePage> {
-  File? _image; // Initialize with a default value of an empty file path
-  File? _image2; // Initialize with a default value of an empty file path
+  File?
+      _image; // Initialize with a default value of an empty file path
+  File?
+      _image2; // Initialize with a default value of an empty file path
   double _freshness = 0;
   String _fruitClass = '';
   double _price = 0;
@@ -35,12 +37,12 @@ class _MyHomePageState extends State<HomePage> {
   }
 
   void testConnection() async {
-    Socket.connect(
-            ServerAddressSettings.serverAddress, ServerAddressSettings.dbPort,
+    Socket.connect(ServerAddressSettings.serverAddress,
+            ServerAddressSettings.dbPort,
             timeout: const Duration(seconds: 5))
         .then((socket) {
-      Socket.connect(
-              ServerAddressSettings.serverAddress, ServerAddressSettings.mlPort,
+      Socket.connect(ServerAddressSettings.serverAddress,
+              ServerAddressSettings.mlPort,
               timeout: const Duration(seconds: 5))
           .then((socket) {
         setState(() => _status = 'ONLINE!');
@@ -60,16 +62,20 @@ class _MyHomePageState extends State<HomePage> {
     });
   }
 
-  Future<void> pickImageFromGallery(void Function(File?) setImage) async {
-    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+  Future<void> pickImageFromGallery(
+      void Function(File?) setImage) async {
+    final image = await ImagePicker()
+        .pickImage(source: ImageSource.gallery);
     if (image == null) return;
     final imageTemp = File(image.path);
     setState(() => setImage(imageTemp));
   }
 
-  Future<void> pickImageFromCamera(void Function(File?) setImage) async {
+  Future<void> pickImageFromCamera(
+      void Function(File?) setImage) async {
     if (Platform.isAndroid || Platform.isIOS) {
-      final image = await ImagePicker().pickImage(source: ImageSource.camera);
+      final image = await ImagePicker()
+          .pickImage(source: ImageSource.camera);
       if (image == null) return;
       final imageTemp = File(image.path);
       setState(() => setImage(imageTemp));
@@ -86,24 +92,28 @@ class _MyHomePageState extends State<HomePage> {
   }
 
   Future<void> sendImage() async {
-    // String mlServerURL = "http://127.0.0.1:8000/predict";
     String mlServerURL =
         'http://${ServerAddressSettings.serverAddress}:${ServerAddressSettings.mlPort}/predict';
     String dbServerURL =
         "http://${ServerAddressSettings.serverAddress}:${ServerAddressSettings.dbPort}/price";
 
     try {
-      Future<http.Response> mlRequestFunction(File? image) async {
+      Future<http.Response> mlRequestFunction(
+          File? image) async {
         var mlRequest = http.MultipartRequest(
           'POST',
           Uri.parse(mlServerURL),
         );
-        Map<String, String> headers = {"Content-type": "multipart/form-data"};
-        mlRequest.files
-            .add(await http.MultipartFile.fromPath('image', image!.path));
+
+        Map<String, String> headers = {
+          "Content-type": "multipart/form-data"
+        };
+        mlRequest.files.add(await http.MultipartFile.fromPath(
+            'image', image!.path));
         mlRequest.headers.addAll(headers);
         var res = await mlRequest.send();
-        http.Response mlResponse = await http.Response.fromStream(res);
+        http.Response mlResponse =
+            await http.Response.fromStream(res);
 
         return mlResponse;
       }
@@ -119,7 +129,8 @@ class _MyHomePageState extends State<HomePage> {
         }
       } else if (_image2 == null) {
         setState(() => {
-              _errorTitle = 'Tidak ada gambar buah sisi belakang!',
+              _errorTitle =
+                  'Tidak ada gambar buah sisi belakang!',
               _errorMessage =
                   'Mohon ambil gambar buah sisi belakang terlebih dahulu'
             });
@@ -140,29 +151,28 @@ class _MyHomePageState extends State<HomePage> {
         http.Response ml2 = await mlRequestFunction(_image2);
 
         if (ml1.statusCode == 200 && ml2.statusCode == 200) {
-          var jsondata1 = json.decode(ml1.body); //decode json dat
-          var jsondata2 = json.decode(ml2.body); //decode json dat
+          var jsondata1 =
+              json.decode(ml1.body); //decode json dat
+          var jsondata2 =
+              json.decode(ml2.body); //decode json dat
 
           var fruitName1 = jsondata1['fruit_name'];
           var fruitName2 = jsondata2['fruit_name'];
 
-          // print("$jsondata1 and $jsondata2");
-
           if (fruitName1 == fruitName2) {
-            var fruitQuality1 =
-                double.parse(jsondata1['freshness_percentage'].toString());
-            var fruitQuality2 =
-                double.parse(jsondata2['freshness_percentage'].toString());
+            var fruitQuality1 = double.parse(
+                jsondata1['freshness_percentage'].toString());
+            var fruitQuality2 = double.parse(
+                jsondata2['freshness_percentage'].toString());
 
-            var overralFruitQuality = ((fruitQuality1 + fruitQuality2) / 2);
+            var overralFruitQuality =
+                ((fruitQuality1 + fruitQuality2) / 2);
 
-            // print(fruitQuality1);
-            // print(fruitQuality2);
-            // print(OverlayPortalController);
             var dbResponse = await http.post(
               Uri.parse(dbServerURL),
               headers: <String, String>{
-                'Content-Type': 'application/json; charset=UTF-8',
+                'Content-Type':
+                    'application/json; charset=UTF-8',
               },
               body: jsonEncode(<String, String>{
                 'nama_buah': jsondata1['fruit_name'].toString(),
@@ -175,9 +185,10 @@ class _MyHomePageState extends State<HomePage> {
 
               setState(() => {
                     _fruitClass = jsondata1['fruit_name'],
-                    _freshness =
-                        double.parse(overralFruitQuality.toStringAsFixed(2)),
-                    _price = double.parse(dbJSONdata['harga_buah'].toString()),
+                    _freshness = double.parse(
+                        overralFruitQuality.toStringAsFixed(2)),
+                    _price = double.parse(
+                        dbJSONdata['harga_buah'].toString()),
                     _kualitas = dbJSONdata['kualitas']
                   });
             } else {
@@ -213,8 +224,10 @@ class _MyHomePageState extends State<HomePage> {
       }
     } catch (e) {
       // print(e);
-      setState(() =>
-          {_errorTitle = 'Application Error!', _errorMessage = e.toString()});
+      setState(() => {
+            _errorTitle = 'Application Error!',
+            _errorMessage = e.toString()
+          });
       if (context.mounted) {
         showAlertDialog(context);
       }
@@ -223,17 +236,11 @@ class _MyHomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.black,
         title: const Text(
-          'Aplikasi Pemindaian Kesegaran dan Kalkulasi Harga Buah',
+          'Pemindaian Kesegaran Buah',
           style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w200,
@@ -242,71 +249,101 @@ class _MyHomePageState extends State<HomePage> {
         ),
       ),
       drawer: const NavBar(),
-      body: Center(
+      body: Container(
+        alignment: Alignment.center,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _image != null
-                    ? Padding(
-                        padding: const EdgeInsets.only(left: 10, right: 10),
-                        child: SizedBox(
-                          width: 150,
-                          height: 150,
-                          child: Image.file(
-                            _image!,
-                            fit: BoxFit.cover,
-                          ),
-                        ))
-                    : const SizedBox(width: 150, height: 150),
-                _image2 != null
-                    ? Padding(
-                        padding: const EdgeInsets.only(left: 10, right: 10),
-                        child: SizedBox(
-                          width: 150,
-                          height: 150,
-                          child: Image.file(
-                            _image2!,
-                            fit: BoxFit.cover,
-                          ),
-                        ))
-                    : const SizedBox(width: 150, height: 150),
-              ],
+            Container(
+                alignment: Alignment.topCenter,
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 10, right: 10),
+                  child: Text(
+                      'Aplikasi Pemindaian Kesegaran dan Kalkulasi Harga Buah',
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500),
+                      textAlign: TextAlign.center),
+                )),
+            Container(
+              alignment: Alignment.center,
+              height: 640,
+              child: Center(
+                  child: Column(
+                      mainAxisAlignment:
+                          MainAxisAlignment.center,
+                      children: <Widget>[
+                    Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.center,
+                      children: [
+                        _image != null
+                            ? Padding(
+                                padding: const EdgeInsets.only(
+                                    left: 10, right: 10),
+                                child: SizedBox(
+                                  width: 150,
+                                  height: 150,
+                                  child: Image.file(
+                                    _image!,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ))
+                            : const SizedBox(
+                                width: 150, height: 150),
+                        _image2 != null
+                            ? Padding(
+                                padding: const EdgeInsets.only(
+                                    left: 10, right: 10),
+                                child: SizedBox(
+                                  width: 150,
+                                  height: 150,
+                                  child: Image.file(
+                                    _image2!,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ))
+                            : const SizedBox(
+                                width: 150, height: 150),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Text('Nama Buah: $_fruitClass'),
+                    Text('Persentase Kesegaran: $_freshness %'),
+                    Text('Harga: Rp. $_price'),
+                    Text('Kualitas: $_kualitas'),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () => sendImage(),
+                      child: const Text('Cek Kesegaran'),
+                    ),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () => showPickImagePopup(
+                          (image) => _image = image, "Depan"),
+                      child:
+                          const Text('Ambil Gambar Sisi Depan'),
+                    ),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () => showPickImagePopup(
+                          (image) => _image2 = image,
+                          "Belakang"),
+                      child: const Text(
+                          'Ambil Gambar Sisi Belakang'),
+                    ),
+                    const SizedBox(height: 20),
+                    Text('STATUS: $_status'),
+                  ])),
             ),
-            const SizedBox(height: 20),
-            Text('Nama Buah: $_fruitClass'),
-            Text('Persentase Kesegaran: $_freshness %'),
-            Text('Harga: Rp. $_price'),
-            Text('Kualitas: $_kualitas'),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => sendImage(),
-              child: const Text('Cek Kesegaran'),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () =>
-                  showPickImagePopup((image) => _image = image, "Depan"),
-              child: const Text('Ambil Gambar Sisi Depan'),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () =>
-                  showPickImagePopup((image) => _image2 = image, "Belakang"),
-              child: const Text('Ambil Gambar Sisi Belakang'),
-            ),
-            const SizedBox(height: 20),
-            Text('STATUS: $_status'),
           ],
         ),
       ),
-      // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 
-  void showPickImagePopup(Function(dynamic) setImage, String nama) {
+  void showPickImagePopup(
+      Function(dynamic) setImage, String nama) {
     showCupertinoModalPopup(
         context: context,
         builder: (BuildContext builder) {
@@ -317,7 +354,11 @@ class _MyHomePageState extends State<HomePage> {
                   color: CupertinoColors.white,
                   alignment: Alignment.center,
                   width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).copyWith().size.height * 0.25,
+                  height: MediaQuery.of(context)
+                          .copyWith()
+                          .size
+                          .height *
+                      0.25,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -331,14 +372,16 @@ class _MyHomePageState extends State<HomePage> {
                       )),
                       const SizedBox(height: 20),
                       Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisAlignment:
+                              MainAxisAlignment.center,
                           children: [
                             ElevatedButton(
                               onPressed: () => {
                                 pickImageFromGallery(setImage),
                                 Navigator.of(context).pop()
                               },
-                              child: const Text('Ambil Gambar dari Gallery'),
+                              child: const Text(
+                                  'Ambil Gambar dari Gallery'),
                             ),
                             const SizedBox(height: 16),
                             ElevatedButton(
@@ -346,7 +389,8 @@ class _MyHomePageState extends State<HomePage> {
                                 pickImageFromCamera(setImage),
                                 Navigator.of(context).pop()
                               },
-                              child: const Text('Ambil Gambar dari Kamera'),
+                              child: const Text(
+                                  'Ambil Gambar dari Kamera'),
                             ),
                           ])
                     ],
@@ -395,8 +439,8 @@ class _MyHomePageState extends State<HomePage> {
     // set up the AlertDialog
     AlertDialog alert = AlertDialog(
       title: const Text('Connection Error'),
-      content:
-          const Text('Pastikan settingan server sudah diatur dengan benar'),
+      content: const Text(
+          'Pastikan settingan server sudah diatur dengan benar'),
       actions: [
         okButton,
       ],
