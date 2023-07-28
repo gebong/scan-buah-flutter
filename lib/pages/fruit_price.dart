@@ -94,8 +94,8 @@ class _FruitPriceState extends State<FruitPricePage> {
   // List of items in our dropdown menu
 
   void testConnection() async {
-    Socket.connect(
-            ServerAddressSettings.serverAddress, ServerAddressSettings.dbPort,
+    Socket.connect(ServerAddressSettings.serverAddress,
+            ServerAddressSettings.dbPort,
             timeout: const Duration(seconds: 5))
         .then((socket) {
       setState(() => _status = 'ONLINE!');
@@ -167,7 +167,8 @@ class _FruitPriceState extends State<FruitPricePage> {
 
       // print(dbResponse.statusCode);
 
-      if (dbResponse.statusCode == 200 || dbResponse.statusCode == 201) {
+      if (dbResponse.statusCode == 200 ||
+          dbResponse.statusCode == 201) {
         List<Item> data = await showAllData();
 
         setState(() => {
@@ -199,8 +200,8 @@ class _FruitPriceState extends State<FruitPricePage> {
         // showAlertDialog();
       }
     } catch (e) {
-      setState(
-          () => {_errorTitle = 'App Error!', _errorMessage = e.toString()});
+      setState(() =>
+          {_errorTitle = 'App Error!', _errorMessage = e.toString()});
       showAlertDialog(context);
       // print(e);
     }
@@ -246,14 +247,16 @@ class _FruitPriceState extends State<FruitPricePage> {
                 }),
             const SizedBox(height: 20),
             Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 16),
                 child: SizedBox(
                   width: 200,
                   child: TextField(
                     enabled: (dropdownvalue != null ? true : false),
                     keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly
+                    ],
                     controller: priceController,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
@@ -268,7 +271,8 @@ class _FruitPriceState extends State<FruitPricePage> {
                   {
                     setState(() => {
                           _errorTitle = 'Tidak ada buah yang dipilih!',
-                          _errorMessage = 'Mohon pilih buah terlebih dahulu!'
+                          _errorMessage =
+                              'Mohon pilih buah terlebih dahulu!'
                         }),
                     showAlertDialog(context)
                   }
@@ -361,8 +365,8 @@ class _FruitPriceState extends State<FruitPricePage> {
     // set up the AlertDialog
     AlertDialog alert = AlertDialog(
       title: const Text('Connection Error'),
-      content:
-          const Text('Pastikan settingan server sudah diatur dengan benar'),
+      content: const Text(
+          'Pastikan settingan server sudah diatur dengan benar'),
       actions: [
         okButton,
       ],
